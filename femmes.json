@@ -1,0 +1,85 @@
+[
+  {
+    "Prenom": "Camille",
+    "Nom": "Dupont",
+    "Age": 25,
+    "TranchesRecherchees": [
+      "30-35"
+    ]
+  },
+  {
+    "Prenom": "Léa",
+    "Nom": "Morel",
+    "Age": 26,
+    "TranchesRecherchees": [
+      "30-35",
+      "35-40"
+    ]
+  },
+  {
+    "Prenom": "Sarah",
+    "Nom": "Michel",
+    "Age": 27,
+    "TranchesRecherchees": [
+      "30-35"
+    ]
+  },
+  {
+    "Prenom": "Emma",
+    "Nom": "Garcia",
+    "Age": 28,
+    "TranchesRecherchees": [
+      "30-35"
+    ]
+  },
+  {
+    "Prenom": "Chloé",
+    "Nom": "Roux",
+    "Age": 29,
+    "TranchesRecherchees": [
+      "30-35",
+      "35-40"
+    ]
+  },
+  {
+    "Prenom": "Julie",
+    "Nom": "Fournier",
+    "Age": 36,
+    "TranchesRecherchees": [
+      "40-45"
+    ]
+  },
+  {
+    "Prenom": "Manon",
+    "Nom": "François",
+    "Age": 38,
+    "TranchesRecherchees": [
+      "40-45",
+      "45-50"
+    ]
+  },
+  {
+    "Prenom": "Anaïs",
+    "Nom": "Vidal",
+    "Age": 48,
+    "TranchesRecherchees": [
+      "20-25"
+    ]
+  },
+  {
+    "Prenom": "Béatrice",
+    "Nom": "Noël",
+    "Age": 52,
+    "TranchesRecherchees": [
+      "65-70"
+    ]
+  },
+  {
+    "Prenom": "Monique",
+    "Nom": "Renault",
+    "Age": 64,
+    "TranchesRecherchees": [
+      "70-75"
+    ]
+  }
+]
