@@ -31,10 +31,15 @@ internal static class Program
             var hommes = Charger(fichierHommes);
             var femmes = Charger(fichierFemmes);
             var repartiteur = new RepartiteurCpSat(hommes, femmes);
-            var resultat = repartiteur.Repartir(limiteSecondes);
+            var resultatInitial = repartiteur.Repartir(limiteSecondes);
+            var bilan = PlacementComplementaire.Completer(resultatInitial, hommes, femmes);
+            var resultat = bilan.Resultat;
 
             Console.WriteLine();
             EcrireCouleur("========== RÉSULTAT DE LA RÉPARTITION ==========" , ConsoleColor.Yellow);
+            Console.WriteLine("Phase 1 (CP-SAT)              : {0} personnes", resultatInitial.NombrePlaces);
+            Console.WriteLine("Phase 2 (bornes d'âge)       : +{0} personnes", bilan.Phase2);
+            Console.WriteLine("Phase 3 (âge le plus proche) : +{0} personnes", bilan.Phase3);
             Console.WriteLine("Nombre de personnes totales     : {0}", hommes.Count + femmes.Count);
             Console.WriteLine("Nombre de tables créées         : {0}", resultat.Tables.Count);
             Console.WriteLine("Nombre de personnes placées     : {0}", resultat.NombrePlaces);
@@ -52,14 +57,14 @@ internal static class Program
             if (resultat.FemmesNonPlacees.Count == 0) Console.WriteLine("Aucune");
             foreach (var index in resultat.FemmesNonPlacees)
                 EcrirePersonneAvecRaison(femmes[index],
-                    repartiteur.ExpliquerNonPlacement(true, index, resultat), ConsoleColor.Magenta);
+                    "Aucune table existante ne possède d’homme permettant de calculer un intervalle d’âge.", ConsoleColor.Magenta);
 
             Console.WriteLine();
             Console.WriteLine("Hommes ({0}) :", resultat.HommesNonPlaces.Count);
             if (resultat.HommesNonPlaces.Count == 0) Console.WriteLine("Aucun");
             foreach (var index in resultat.HommesNonPlaces)
                 EcrirePersonneAvecRaison(hommes[index],
-                    repartiteur.ExpliquerNonPlacement(false, index, resultat), ConsoleColor.Cyan);
+                    "Aucune table existante ne possède de femme permettant de calculer un intervalle d’âge.", ConsoleColor.Cyan);
 
             Console.WriteLine();
             for (var numero = 0; numero < resultat.Tables.Count; numero++)
