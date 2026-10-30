@@ -74,7 +74,7 @@ internal static class Program
 
                 EcrireCouleur($"---------- Fin table {numero + 1} ----------", ConsoleColor.Yellow);
             }
-
+            Console.ReadLine();
             return 0;
         }
         catch (Exception ex)
