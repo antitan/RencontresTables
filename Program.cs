@@ -30,55 +30,51 @@ internal static class Program
 
             var hommes = Charger(fichierHommes);
             var femmes = Charger(fichierFemmes);
+            // Phase 1 : optimisation stricte CP-SAT.
             var repartiteur = new RepartiteurCpSat(hommes, femmes);
-            var resultatInitial = repartiteur.Repartir(limiteSecondes);
-            var bilan = PlacementComplementaire.Completer(resultatInitial, hommes, femmes);
-            var resultat = bilan.Resultat;
+            var resultatCpSat = repartiteur.Repartir(limiteSecondes);
+
+            // Phases complémentaires : insérer TOUS les inscrits encore disponibles.
+            // Les ajouts ultérieurs au CP-SAT apparaissent en jaune dans les tables.
+            var placementComplementaire = new PlacementComplementaire(hommes, femmes);
+            var resultat = placementComplementaire.Completer(resultatCpSat);
 
             Console.WriteLine();
-            EcrireCouleur("========== RÉSULTAT DE LA RÉPARTITION ==========" , ConsoleColor.Yellow);
-            Console.WriteLine("Phase 1 (CP-SAT)              : {0} personnes", resultatInitial.NombrePlaces);
-            Console.WriteLine("Phase 2 (bornes d'âge)       : +{0} personnes", bilan.Phase2);
-            Console.WriteLine("Phase 3 (âge le plus proche) : +{0} personnes", bilan.Phase3);
-            Console.WriteLine("Nombre de personnes totales     : {0}", hommes.Count + femmes.Count);
-            Console.WriteLine("Nombre de tables créées         : {0}", resultat.Tables.Count);
-            Console.WriteLine("Nombre de personnes placées     : {0}", resultat.NombrePlaces);
-            Console.WriteLine("Nombre de personnes non placées : {0}",
-                resultat.HommesNonPlaces.Count + resultat.FemmesNonPlacees.Count);
+            EcrireCouleur("========== RÉSULTAT DE LA RÉPARTITION ==========", ConsoleColor.Yellow);
+            Console.WriteLine("Nombre de personnes totales       : {0}", hommes.Count + femmes.Count);
+            Console.WriteLine("Nombre de tables créées           : {0}", resultat.Tables.Count);
+            Console.WriteLine("Personnes placées par CP-SAT      : {0}", resultat.NombrePlacesCpSat);
+            Console.WriteLine("Personnes ajoutées après CP-SAT   : {0}", resultat.NombreAjoutes);
+            Console.WriteLine("Nombre total de personnes placées : {0}", resultat.NombrePlaces);
+            Console.WriteLine("   - Intervalle d'âge             : {0}", resultat.AjoutesParIntervalle);
+            Console.WriteLine("   - Proximité d'âge              : {0}", resultat.AjoutesParProximite);
+            Console.WriteLine("   - Nouvelles tables             : {0}", resultat.AjoutesDansNouvellesTables);
             Console.WriteLine("Solveur CP-SAT : {0} | Optimalité prouvée : {1} | Calcul : {2:F3} s",
                 resultat.StatutSolveur, resultat.OptimaliteProuvee ? "oui" : "non", resultat.DureeSecondes);
-            if (!resultat.OptimaliteProuvee)
-                EcrireCouleur("ATTENTION : le résultat est valide, mais son optimalité n'est pas garantie.",
-                    ConsoleColor.DarkYellow);
-
             Console.WriteLine();
-            EcrireCouleur("========== PERSONNES NON PLACÉES ==========" , ConsoleColor.Yellow);
-            Console.WriteLine("Femmes ({0}) :", resultat.FemmesNonPlacees.Count);
-            if (resultat.FemmesNonPlacees.Count == 0) Console.WriteLine("Aucune");
-            foreach (var index in resultat.FemmesNonPlacees)
-                EcrirePersonneAvecRaison(femmes[index],
-                    "Aucune table existante ne possède d’homme permettant de calculer un intervalle d’âge.", ConsoleColor.Magenta);
+            EcrireCouleur("Couleurs : femmes en rose, hommes en bleu, ajouts après CP-SAT en jaune.",
+                ConsoleColor.Yellow);
+            Console.WriteLine("Note : les placements complémentaires peuvent déroger aux critères stricts de CP-SAT.");
 
-            Console.WriteLine();
-            Console.WriteLine("Hommes ({0}) :", resultat.HommesNonPlaces.Count);
-            if (resultat.HommesNonPlaces.Count == 0) Console.WriteLine("Aucun");
-            foreach (var index in resultat.HommesNonPlaces)
-                EcrirePersonneAvecRaison(hommes[index],
-                    "Aucune table existante ne possède de femme permettant de calculer un intervalle d’âge.", ConsoleColor.Cyan);
-
-            Console.WriteLine();
-            for (var numero = 0; numero < resultat.Tables.Count; numero++)
+            for (int numero = 0; numero < resultat.Tables.Count; numero++)
             {
                 var table = resultat.Tables[numero];
+                Console.WriteLine();
                 EcrireCouleur($"---------- Table {numero + 1} ({table.Hommes.Length}H / {table.Femmes.Length}F) ----------",
                     ConsoleColor.Yellow);
                 Console.WriteLine("Femmes :");
-                foreach (var index in table.Femmes) EcrireCouleur(femmes[index].NomComplet, ConsoleColor.Magenta);
+                foreach (int index in table.Femmes)
+                    EcrirePersonne(femmes[index],
+                        table.FemmesComplementaires.Contains(index) ? ConsoleColor.Yellow : ConsoleColor.Magenta);
+
                 Console.WriteLine("Hommes :");
-                foreach (var index in table.Hommes) EcrireCouleur(hommes[index].NomComplet, ConsoleColor.Cyan);
+                foreach (int index in table.Hommes)
+                    EcrirePersonne(hommes[index],
+                        table.HommesComplementaires.Contains(index) ? ConsoleColor.Yellow : ConsoleColor.Cyan);
+
                 EcrireCouleur($"---------- Fin table {numero + 1} ----------", ConsoleColor.Yellow);
-                Console.WriteLine();
             }
+
             return 0;
         }
         catch (Exception ex)
@@ -119,12 +115,11 @@ internal static class Program
         return personnes;
     }
 
-    private static void EcrirePersonneAvecRaison(Personne personne, string raison, ConsoleColor couleur)
+    private static void EcrirePersonne(Personne personne, ConsoleColor couleur)
     {
-        var precedente = Console.ForegroundColor;
-        try { Console.ForegroundColor = couleur; Console.Write(personne.NomComplet); }
-        finally { Console.ForegroundColor = precedente; }
-        Console.WriteLine(" -> " + raison);
+        string tranches = string.Concat(personne.TranchesRecherchees!
+            .Select(t => $"[{t}]"));
+        EcrireCouleur($"{personne.NomComplet} {personne.Age} {tranches}", couleur);
     }
 
     private static void EcrireCouleur(string texte, ConsoleColor couleur)

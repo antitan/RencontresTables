@@ -24,3 +24,24 @@ internal sealed record Resultat(
 }
 
 internal sealed record PlageAge(string Nom, int Minimum, int MaximumExclusif);
+
+/// <summary>Table finale : les ensembles complementaires identifient les ajouts post CP-SAT.</summary>
+internal sealed record TableFinale(
+    int[] Hommes,
+    int[] Femmes,
+    HashSet<int> HommesComplementaires,
+    HashSet<int> FemmesComplementaires);
+
+internal sealed record ResultatFinal(
+    List<TableFinale> Tables,
+    int NombrePlacesCpSat,
+    int AjoutesParIntervalle,
+    int AjoutesParProximite,
+    int AjoutesDansNouvellesTables,
+    string StatutSolveur,
+    bool OptimaliteProuvee,
+    double DureeSecondes)
+{
+    public int NombrePlaces => Tables.Sum(t => t.Hommes.Length + t.Femmes.Length);
+    public int NombreAjoutes => AjoutesParIntervalle + AjoutesParProximite + AjoutesDansNouvellesTables;
+}

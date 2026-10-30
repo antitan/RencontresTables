@@ -1,67 +1,80 @@
-# RencontresTables — .NET 8 / Google OR-Tools CP-SAT
+# RencontresTables — .NET 8, Google OR-Tools CP-SAT et placement complémentaire
 
-Application console répartissant des participants dans des tables virtuelles. Cette version conserve le solveur original et ajoute deux phases de rattrapage dans `Program.cs` via `PlacementComplementaire`.
+Application console C# qui place **tous les participants** dans des tables virtuelles, en distinguant les placements stricts de CP-SAT des placements complémentaires.
 
-## Installation
+## Prérequis
 
-Prérequis : SDK .NET 8 et accès NuGet. Dans le dossier du projet :
+- SDK **.NET 8** (x64 recommandé), Visual Studio 2022 facultatif.
+- Accès NuGet pour restaurer `Google.OrTools 9.15.6755` et `Newtonsoft.Json 13.0.3`.
+
+## Démarrage
+
+Ouvrir le dossier du projet, puis exécuter :
 
 ```bash
 dotnet restore
 dotnet run -- hommes.json femmes.json 15
 ```
 
-Le dernier argument est le délai du solveur CP-SAT en secondes (0,1 à 600 ; défaut : 15). Pour compiler : `dotnet build -c Release`.
+Sur Windows, vous pouvez également lancer `Lancer_Windows.bat`.
 
-## Entrées
+Le dernier argument est le **temps maximal accordé au solveur en secondes** (par défaut 15, de 0,1 à 600 secondes). Ce n'est pas le nombre d'essais de l'ancienne version.
 
-Deux tableaux JSON de personnes, respectivement `hommes.json` et `femmes.json`. Exemple :
+Exemple de fichiers JSON (présents dans l'archive) :
 
 ```json
 [
   {
-    "Prenom": "Alexandre",
-    "Nom": "Martin",
-    "Age": 31,
+    "Prenom": "Kevin",
+    "Nom": "Smith",
+    "Age": 32,
     "TranchesRecherchees": ["25-30", "30-35"]
   }
 ]
 ```
 
-Les tranches autorisées sont : `20-25`, `25-30`, `30-35`, `35-40`, `40-45`, `45-50`, `45-55`, `55-60`, `60-65`, `65-70`, `70-75`. Les intervalles de recherche sont demi-ouverts, sauf `70-75` qui inclut 75. Les doublons de tranches sont éliminés.
+## Phases de répartition
 
-## Déroulement des trois phases
+**Phase 1 — Google OR-Tools CP-SAT :** recherche de tables composées de 5 hommes + 5 femmes, puis 4+4, 3+3, 2+2. Chaque homme d'une table doit être réciproquement compatible avec toutes les femmes de cette table. Une personne ne peut apparaître qu'une fois. Le solveur maximise d'abord le nombre placé, puis favorise les grandes tables. Le statut `Optimal` prouve l'optimalité *de cette phase stricte* ; `Feasible` indique une solution valide sans preuve d'optimalité.
 
-### Phase 1 — Optimisation CP-SAT (inchangée)
+**Phase 2 — Placement par intervalle :** chaque personne non retenue par CP-SAT rejoint, si possible, une table existante où **son âge est compris entre l'âge minimum et maximum des personnes du sexe opposé déjà présentes**. On privilégie le plus grand nombre de compatibilités réciproques puis l'équilibre de la table.
 
-Le solveur crée des tables équilibrées de 2H/2F à 5H/5F, en exigeant une compatibilité réciproque entre chaque homme et chaque femme de la table. Il maximise d'abord le nombre de personnes placées, puis favorise les tables de plus grande taille. Un statut `Feasible` ne prouve pas l'optimalité, contrairement à `Optimal`.
+**Phase 3 — Placement par proximité :** parmi les personnes encore disponibles, chacune est affectée si possible à une table existante, en minimisant la distance de son âge à l'intervalle d'âge du sexe opposé présent.
 
-### Phase 2 — Placement dans les bornes d'âge
+**Phase 4 — Nouvelles tables :** si les tables précédentes n'ont plus de capacité adéquate, on répartit tous les participants restants dans de nouvelles tables, de manière aussi équilibrée que possible entre hommes et femmes. Leur répartition tient compte de leurs âges. Si les effectifs le rendent inévitable, une table complémentaire peut n'avoir qu'un seul sexe.
 
-Chaque personne non placée peut rejoindre **une table existante** si son âge appartient à l'intervalle **inclusif** `[âge minimum, âge maximum]` des personnes du sexe opposé présentes à cette table. Exemple : un homme de 31 ans peut rejoindre une table où les femmes ont entre 20 et 41 ans, mais pas entre 20 et 28 ans. Les tranches recherchées ne sont plus exigées à ce stade.
+**Capacité : maximum 5 hommes et 5 femmes par table**, y compris les tables complémentaires. Les phases 2 à 4 ne garantissent **ni la parité, ni la compatibilité réciproque** : c'est un choix assumé pour que tous les inscrits aient une table. Le programme distingue ces ajouts pour éviter de les confondre avec le résultat CP-SAT strict.
 
-L'algorithme recalcule les intervalles après chaque affectation. Il traite en priorité les personnes ayant le moins de tables admissibles ; parmi les tables admissibles, il choisit celle avec le plus petit effectif total, puis le plus petit effectif du même sexe, puis le plus petit numéro de table. Cela répartit les nouveaux participants plutôt que de remplir systématiquement la première table. C'est une heuristique d'équilibrage, pas une preuve d'équilibre global optimal.
+## Affichage
 
-### Phase 3 — Placement par proximité d'âge
+La liste séparée des personnes non placées est supprimée : tout le monde apparaît dans les tables.
 
-Pour chaque personne encore en attente, on mesure sa distance à l'intervalle d'âge des personnes du sexe opposé de chaque table : `0` à l'intérieur de l'intervalle, `min - âge` en dessous, `âge - max` au-dessus. On choisit la distance minimale ; en cas d'égalité, on favorise la table la moins remplie, puis le plus petit effectif du même sexe, puis son numéro. Les bornes sont recalculées après chaque affectation.
+- **Rose / magenta** : femmes retenues lors de la phase CP-SAT.
+- **Bleu / cyan** : hommes retenus lors de la phase CP-SAT.
+- **Jaune** : femmes **et** hommes ajoutés après la phase CP-SAT, y compris dans les nouvelles tables.
 
-## Limitations et garanties
+Chaque ligne affiche **nom complet + âge + toutes les tranches recherchées**, dans **une couleur unique** :
 
-- Les phases 2 et 3 **n'imposent ni compatibilité réciproque, ni équilibre hommes/femmes, ni capacité maximale de dix personnes**. Elles peuvent modifier les effectifs et les intervalles des tables initiales, sans déplacer les personnes déjà affectées.
-- **Aucune table supplémentaire n'est créée** durant les phases 2 et 3. S'il n'existe aucune table CP-SAT, les personnes restent non placées. De même, une table sans membre du sexe opposé ne permet pas de calculer la distance requise.
-- Chaque personne est affectée au plus une fois ; une vérification finale contrôle l'exhaustivité des indices et l'absence de doublons.
-- Le programme affiche les nombres placés dans chacune des trois phases et les éventuels participants restant en attente.
-- Les nouvelles phases sont déterministes et gloutonnes ; elles ne garantissent pas la meilleure répartition globale.
-- Le temps maximal fourni sur la ligne de commande ne limite que la recherche CP-SAT, pas les phases de rattrapage.
+```text
+Femmes :
+Sarah Einstein 30 [25-30][30-35]
+Hommes :
+Kevin Smith 32 [25-30][30-35]
+```
 
-## Organisation
+La console fournit aussi les nombres de personnes placées par CP-SAT, par intervalle, par proximité et dans les nouvelles tables, ainsi que le statut et la durée du solveur. La section « personnes non placées » n'existe plus.
 
-- `Program.cs` : lecture, validation, orchestration et affichage.
-- `Models.cs` : objets métiers et résultat.
-- `RepartiteurCpSat.cs` : modèle CP-SAT initial.
-- `PlacementComplementaire.cs` : phases 2 et 3, équilibrage et contrôles.
+## Fichiers
 
-## Validation
+- `Program.cs` : chargement des fichiers avec Newtonsoft.Json, affichage coloré et lancement des phases.
+- `Models.cs` : profils, tables et métriques.
+- `RepartiteurCpSat.cs` : optimisation mathématique, inchangée sur ses contraintes strictes.
+- `PlacementComplementaire.cs` : les trois phases d'affectation après CP-SAT ; marque les nouveaux membres pour l'affichage en jaune.
+- `hommes.json`, `femmes.json` : jeu de démonstration de 10 hommes et 10 femmes.
+- `RencontresTables.csproj` : projet .NET 8.
 
-Le SDK .NET n'étant pas installé dans l'environnement de génération, le projet n'a pas été compilé ni exécuté ici. Exécuter `dotnet restore` puis `dotnet build` et tester avec des données réelles avant utilisation.
+## Important
+
+Le statut `Optimal` signifie que **la répartition stricte CP-SAT** a atteint son optimum mathématique, pas que les placements complémentaires sont des rencontres mutuellement compatibles. Les phases complémentaires peuvent créer une table déséquilibrée ou composée de personnes non compatibles : ce choix vise à n'exclure personne et doit être validé selon les règles métier de votre application.
+
+Le SDK .NET n'est pas disponible dans l'environnement de génération : la compilation et l'exécution restent à vérifier sur un poste doté de .NET 8.

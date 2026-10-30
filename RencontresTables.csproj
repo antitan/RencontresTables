@@ -4,17 +4,12 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Google.OrTools" Version="9.15.6755" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="femmes.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="hommes.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Update="hommes.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="femmes.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
