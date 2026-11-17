@@ -16,7 +16,6 @@ dotnet restore
 dotnet run -- hommes.json femmes.json 15
 ```
 
-Sur Windows, vous pouvez également lancer `Lancer_Windows.bat`.
 
 Le dernier argument est le **temps maximal accordé au solveur en secondes** (par défaut 15, de 0,1 à 600 secondes). Ce n'est pas le nombre d'essais de l'ancienne version.
 
